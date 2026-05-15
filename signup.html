@@ -375,24 +375,27 @@
       APP_ID: 'cli_a94b4e9bd0795cbb',
       APP_SECRET: 'iDf90y9LPE6f3tQyGUnALcMbcgsgQqkR',
       APP_TOKEN: 'JhdJbEsH3aeR67siugNcFUo3nqh',
+      TABLE_EVENT: 'tblAqHM1jEhsKXM3',     // 活动表
       TABLE_SESSION: 'tblrcWOB3gnoZ7bY',   // 场次表
       TABLE_MANAGER: 'tblIARLJGDVVNdYg',   // 客户经理表
       TABLE_REG: 'tbleqs5lrpgsjVy9',        // 报名表
+      FIELD_EVENT_ID: 'fldaER7850',         // 活动ID
+      FIELD_EVENT_NAME: 'fldVd9zs1O',      // 活动名称1
+      FIELD_SESSION_ID: 'fldixhOdfD',      // 场次表-活动ID
       FIELD_SESSION_NAME: 'fldCTvelTu',    // 场次名称
       FIELD_SESSION_TIME: 'fldZVFxU0I',    // 场次时间
-      FIELD_SESSION_EVENT: 'fldIr4IWR2',   // 活动名称
       FIELD_MANAGER_NAME: 'fldicJbIW0',    // 客户经理姓名
       FIELD_REG_NAME: 'fldQ6h8vZJ',        // 客户姓名
       FIELD_REG_PHONE: 'fldMCgqSls',       // 手机号
-      FIELD_REG_IDENTITY: 'fldHkwP12j',   // 报名身份
+      FIELD_REG_IDENTITY: 'fldHkwP12j',     // 报名身份
       FIELD_REG_SESSION: 'fldnfJD3lF',     // 参与场次
       FIELD_REG_MANAGER: 'fldTJaDipZ',     // 客户经理
       FIELD_REG_MAIN: 'fld3T8m4Gf',        // 主报名人
-      FIELD_SESSION_OPTIONS: 'fldnfJD3lF', // 报名表参与场次选项字段ID
     };
 
     // ========== 状态 ==========
     let token = '';
+    let eventId = '';
     let eventName = '';
     let sessions = [];
     let managers = [];
@@ -401,11 +404,6 @@
     let submitting = false;
 
     // ========== 工具函数 ==========
-    function getUrlParam(name) {
-      const params = new URLSearchParams(location.search);
-      return params.get(name);
-    }
-
     function formatTime(ts) {
       if (!ts) return '';
       const d = new Date(ts);
@@ -416,6 +414,11 @@
       if (!ts) return '';
       const d = new Date(ts);
       return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    }
+
+    function getUrlParam(name) {
+      const params = new URLSearchParams(location.search);
+      return params.get(name);
     }
 
     // ========== API ==========
@@ -461,14 +464,35 @@
       return data.data;
     }
 
-    // 获取场次列表（按活动名称筛选）
+    // 获取活动信息（用 event_id 查活动名称）
+    async function fetchEventInfo() {
+      const filter = {
+        conjunction: 'and',
+        conditions: [{
+          field_name: '活动ID',
+          operator: 'is',
+          value: [eventId]
+        }]
+      };
+      const data = await bitableGet(
+        `/bitable/v1/apps/${CONFIG.APP_TOKEN}/tables/${CONFIG.TABLE_EVENT}/records?filter=${encodeURIComponent(JSON.stringify(filter))}&page_size=1`
+      );
+      const items = data.items || [];
+      if (items.length === 0) return null;
+      return {
+        name: items[0].fields['活动名称1'] || '',
+        id: items[0].fields['活动ID'] || '',
+      };
+    }
+
+    // 获取场次列表（用活动ID筛选）
     async function fetchSessions() {
       const filter = {
         conjunction: 'and',
         conditions: [{
-          field_name: '活动名称',
+          field_name: '活动ID',
           operator: 'is',
-          value: [eventName]
+          value: [eventId]
         }]
       };
       const data = await bitableGet(
@@ -829,11 +853,19 @@
       try {
         token = await getTenantToken();
 
-        eventName = getUrlParam('event');
-        if (!eventName) {
-          renderError('缺少活动参数，请通过正确的二维码扫码进入');
+        eventId = getUrlParam('event_id');
+        if (!eventId) {
+          renderError('缺少活动ID参数，请通过正确的二维码扫码进入');
           return;
         }
+
+        // 先查活动信息，得到活动名称用于页面展示
+        const eventInfo = await fetchEventInfo();
+        if (!eventInfo) {
+          renderError(`未找到活动ID：${eventId}`);
+          return;
+        }
+        eventName = eventInfo.name;
 
         await Promise.all([fetchSessions(), fetchManagers()]);
 
