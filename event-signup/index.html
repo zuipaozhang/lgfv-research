@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>活动报名</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --bg: #f1f5f9;
+      --card: #ffffff;
+      --text: #1e293b;
+      --text-light: #64748b;
+      --border: #e2e8f0;
+      --success: #10b981;
+      --error: #ef4444;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 20px 16px 80px;
+    }
+
+    .container { max-width: 600px; margin: 0 auto; }
+
+    /* Header */
+    .header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .header h1 {
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+    .header p {
+      font-size: 14px;
+      color: var(--text-light);
+    }
+
+    /* Loading */
+    .loading {
+      text-align: center;
+      padding: 60px 20px;
+    }
+    .spinner {
+      width: 36px;
+      height: 36px;
+      border: 3px solid var(--border);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading p { color: var(--text-light); font-size: 14px; }
+
+    /* Card */
+    .card {
+      background: var(--card);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+
+    /* Section title */
+    .section-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .section-title::before {
+      content: '';
+      width: 3px;
+      height: 16px;
+      background: var(--primary);
+      border-radius: 2px;
+    }
+
+    /* Session list */
+    .session-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .session-item:last-child { border-bottom: none; }
+    .session-item:active { background: #f8fafc; }
+
+    .session-checkbox {
+      width: 22px;
+      height: 22px;
+      border: 2px solid var(--border);
+      border-radius: 6px;
+      flex-shrink: 0;
+      margin-top: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+    }
+    .session-item.selected .session-checkbox {
+      background: var(--primary);
+      border-color: var(--primary);
+    }
+    .session-item.selected .session-checkbox::after {
+      content: '';
+      width: 5px;
+      height: 9px;
+      border: 2px solid white;
+      border-top: none;
+      border-left: none;
+      transform: rotate(45deg) translate(-1px, -1px);
+    }
+
+    .session-info { flex: 1; }
+    .session-name {
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+    .session-time {
+      font-size: 13px;
+      color: var(--text-light);
+    }
+
+    .empty-sessions {
+      text-align: center;
+      padding: 30px;
+      color: var(--text-light);
+      font-size: 14px;
+    }
+
+    /* Form fields */
+    .form-group {
+      margin-bottom: 16px;
+    }
+    .form-group:last-child { margin-bottom: 0; }
+
+    .form-label {
+      display: block;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+    .form-label .required { color: var(--error); margin-left: 2px; }
+
+    .form-input, .form-select {
+      width: 100%;
+      height: 44px;
+      padding: 0 14px;
+      font-size: 15px;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      background: var(--card);
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.15s;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+    .form-input:focus, .form-select:focus {
+      border-color: var(--primary);
+    }
+    .form-select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%2364748b' d='M6 8L0 0h12z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      padding-right: 36px;
+    }
+
+    .form-error {
+      font-size: 12px;
+      color: var(--error);
+      margin-top: 4px;
+      display: none;
+    }
+    .form-input.error, .form-select.error { border-color: var(--error); }
+    .form-input.error + .form-error, .form-select.error + .form-error { display: block; }
+
+    /* Selected sessions summary */
+    .selected-summary {
+      font-size: 13px;
+      color: var(--primary);
+      margin-bottom: 14px;
+      padding: 10px 12px;
+      background: #eff6ff;
+      border-radius: 8px;
+      display: none;
+    }
+    .selected-summary.show { display: block; }
+
+    /* Companion section */
+    .companion-card {
+      background: #f8fafc;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 12px;
+      position: relative;
+    }
+    .companion-remove {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #fecaca;
+      color: var(--error);
+      border: none;
+      font-size: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+    }
+    .companion-sessions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .companion-session-tag {
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 13px;
+      background: var(--card);
+      border: 1.5px solid var(--border);
+      cursor: pointer;
+      transition: all 0.15s;
+      user-select: none;
+    }
+    .companion-session-tag.selected {
+      background: #ede9fe;
+      border-color: #7c3aed;
+      color: #5b21b6;
+    }
+
+    .btn-add-companion {
+      width: 100%;
+      height: 44px;
+      border: 1.5px dashed var(--border);
+      border-radius: 10px;
+      background: transparent;
+      color: var(--primary);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+      margin-bottom: 8px;
+    }
+    .btn-add-companion:active {
+      background: #eff6ff;
+    }
+
+    /* Submit button */
+    .submit-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 16px;
+      background: rgba(255,255,255,0.95);
+      backdrop-filter: blur(10px);
+      border-top: 1px solid var(--border);
+      z-index: 100;
+    }
+    .submit-bar .container { max-width: 600px; margin: 0 auto; }
+    .btn-submit {
+      width: 100%;
+      height: 48px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-submit:active { background: var(--primary-dark); }
+    .btn-submit:disabled { background: #94a3b8; cursor: not-allowed; }
+
+    /* Result modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      padding: 20px;
+      display: none;
+    }
+    .modal-overlay.show { display: flex; }
+    .modal {
+      background: white;
+      border-radius: 20px;
+      padding: 40px 30px;
+      text-align: center;
+      max-width: 340px;
+      width: 100%;
+    }
+    .modal-icon {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      margin: 0 auto 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+    }
+    .modal-icon.success { background: #d1fae5; }
+    .modal-icon.error { background: #fee2e2; }
+    .modal h2 { font-size: 20px; margin-bottom: 8px; }
+    .modal p { font-size: 14px; color: var(--text-light); margin-bottom: 24px; }
+    .modal .btn-close {
+      padding: 10px 32px;
+      border-radius: 8px;
+      border: none;
+      font-size: 15px;
+      cursor: pointer;
+    }
+    .modal .btn-close.success { background: var(--success); color: white; }
+    .modal .btn-close.error { background: var(--error); color: white; }
+
+    /* Error state */
+    .error-page {
+      text-align: center;
+      padding: 60px 20px;
+    }
+    .error-page .icon { font-size: 48px; margin-bottom: 16px; }
+    .error-page h2 { font-size: 18px; margin-bottom: 8px; }
+    .error-page p { font-size: 14px; color: var(--text-light); }
+  </style>
+</head>
+<body>
+  <div class="container" id="app">
+    <!-- Content rendered by JS -->
+  </div>
+
+  <!-- Result Modal -->
+  <div class="modal-overlay" id="resultModal">
+    <div class="modal">
+      <div class="modal-icon" id="modalIcon">✅</div>
+      <h2 id="modalTitle">提交成功</h2>
+      <p id="modalMessage">您的报名信息已提交</p>
+      <button class="btn-close" id="modalBtn" onclick="closeModal()">确定</button>
+    </div>
+  </div>
+
+  <script>
+    // ========== 配置区 ==========
+    const CONFIG = {
+      APP_ID: 'cli_a94b4e9bd0795cbb',
+      APP_SECRET: 'iDf90y9LPE6f3tQyGUnALcMbcgsgQqkR',
+      APP_TOKEN: 'JhdJbEsH3aeR67siugNcFUo3nqh',
+      TABLE_SESSION: 'tblrcWOB3gnoZ7bY',   // 场次表
+      TABLE_MANAGER: 'tblIARLJGDVVNdYg',   // 客户经理表
+      TABLE_REG: 'tbleqs5lrpgsjVy9',        // 报名表
+      FIELD_SESSION_NAME: 'fldCTvelTu',    // 场次名称
+      FIELD_SESSION_TIME: 'fldZVFxU0I',    // 场次时间
+      FIELD_SESSION_EVENT: 'fldIr4IWR2',   // 活动名称
+      FIELD_MANAGER_NAME: 'fldicJbIW0',    // 客户经理姓名
+      FIELD_REG_NAME: 'fldQ6h8vZJ',        // 客户姓名
+      FIELD_REG_PHONE: 'fldMCgqSls',       // 手机号
+      FIELD_REG_IDENTITY: 'fldHkwP12j',   // 报名身份
+      FIELD_REG_SESSION: 'fldnfJD3lF',     // 参与场次
+      FIELD_REG_MANAGER: 'fldTJaDipZ',     // 客户经理
+      FIELD_REG_MAIN: 'fld3T8m4Gf',        // 主报名人
+      FIELD_SESSION_OPTIONS: 'fldnfJD3lF', // 报名表参与场次选项字段ID
+    };
+
+    // ========== 状态 ==========
+    let token = '';
+    let eventName = '';
+    let sessions = [];
+    let managers = [];
+    let selectedSessions = new Set();
+    let companions = [];
+    let submitting = false;
+
+    // ========== 工具函数 ==========
+    function getUrlParam(name) {
+      const params = new URLSearchParams(location.search);
+      return params.get(name);
+    }
+
+    function formatTime(ts) {
+      if (!ts) return '';
+      const d = new Date(ts);
+      return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    }
+
+    function formatTimeShort(ts) {
+      if (!ts) return '';
+      const d = new Date(ts);
+      return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    }
+
+    // ========== API ==========
+    async function getTenantToken() {
+      const res = await fetch('https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ app_id: CONFIG.APP_ID, app_secret: CONFIG.APP_SECRET })
+      });
+      const data = await res.json();
+      if (data.code !== 0) throw new Error('获取Token失败: ' + data.msg);
+      return data.tenant_access_token;
+    }
+
+    async function bitableGet(url) {
+      const res = await fetch('https://open.feishu.cn/open-apis' + url, {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      const data = await res.json();
+      if (data.code !== 0) throw new Error(data.msg);
+      return data.data;
+    }
+
+    async function bitablePost(url, body) {
+      const res = await fetch('https://open.feishu.cn/open-apis' + url, {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (data.code !== 0) throw new Error(data.msg);
+      return data.data;
+    }
+
+    async function bitableBatchPost(url, records) {
+      const res = await fetch('https://open.feishu.cn/open-apis' + url, {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ records })
+      });
+      const data = await res.json();
+      if (data.code !== 0) throw new Error(data.msg);
+      return data.data;
+    }
+
+    // 获取场次列表（按活动名称筛选）
+    async function fetchSessions() {
+      const filter = {
+        conjunction: 'and',
+        conditions: [{
+          field_name: '活动名称',
+          operator: 'is',
+          value: [eventName]
+        }]
+      };
+      const data = await bitableGet(
+        `/bitable/v1/apps/${CONFIG.APP_TOKEN}/tables/${CONFIG.TABLE_SESSION}/records?filter=${encodeURIComponent(JSON.stringify(filter))}&page_size=100`
+      );
+      sessions = (data.items || []).map(r => ({
+        id: r.record_id,
+        name: r.fields['场次名称'] || '',
+        time: r.fields['场次时间'] || '',
+      })).sort((a, b) => (a.time || '') < (b.time || '') ? -1 : 1);
+    }
+
+    // 获取客户经理列表
+    async function fetchManagers() {
+      const data = await bitableGet(
+        `/bitable/v1/apps/${CONFIG.APP_TOKEN}/tables/${CONFIG.TABLE_MANAGER}/records?page_size=100`
+      );
+      managers = (data.items || []).map(r => ({
+        id: r.record_id,
+        name: r.fields['客户经理姓名'] || ''
+      })).filter(m => m.name);
+    }
+
+    // 确保多选选项存在
+    async function ensureMultiSelectOptions(optionNames) {
+      const fieldData = await bitableGet(
+        `/bitable/v1/apps/${CONFIG.APP_TOKEN}/tables/${CONFIG.TABLE_REG}/fields/${CONFIG.FIELD_REG_SESSION}`
+      );
+      const existingNames = new Set((fieldData.property?.options || []).map(o => o.name));
+      const toAdd = optionNames.filter(n => n && !existingNames.has(n));
+
+      if (toAdd.length > 0) {
+        // 批量添加选项
+        await bitablePost(
+          `/bitable/v1/apps/${CONFIG.APP_TOKEN}/tables/${CONFIG.TABLE_REG}/fields/${CONFIG.FIELD_REG_SESSION}`,
+          {
+            type: 4,
+            property: {
+              options: toAdd.map((name, i) => ({
+                name,
+                color: i % 7
+              }))
+            }
+          }
+        );
+      }
+    }
+
+    // 获取多选选项（场次名称列表）
+    async function getSessionOptions() {
+      const fieldData = await bitableGet(
+        `/bitable/v1/apps/${CONFIG.APP_TOKEN}/tables/${CONFIG.TABLE_REG}/fields/${CONFIG.FIELD_REG_SESSION}`
+      );
+      return (fieldData.property?.options || []).map(o => o.name);
+    }
+
+    // 提交报名
+    async function submitRegistration(mainData, companionDataList) {
+      // 所有需要的多选选项
+      const allSessionNames = [
+        ...selectedSessions,
+        ...companionDataList.flatMap(c => Array.from(c.sessions))
+      ].filter((v, i, a) => a.indexOf(v) === i);
+
+      // 确保选项存在
+      await ensureMultiSelectOptions(allSessionNames);
+      // 重新获取选项ID映射
+      const optField = await bitableGet(
+        `/bitable/v1/apps/${CONFIG.APP_TOKEN}/tables/${CONFIG.TABLE_REG}/fields/${CONFIG.FIELD_REG_SESSION}`
+      );
+      const optMap = {};
+      (optField.property?.options || []).forEach(o => { optMap[o.name] = o.name; });
+
+      const records = [];
+
+      // 主报名人
+      for (const sessionName of selectedSessions) {
+        records.push({
+          fields: {
+            '客户姓名': mainData.name,
+            '手机号': mainData.phone,
+            '报名身份': '主',
+            '参与场次': [optMap[sessionName] || sessionName],
+            '客户经理': mainData.manager || null,
+            '主报名人': mainData.name,
+          }
+        });
+      }
+
+      // 同行人
+      for (const c of companionDataList) {
+        for (const sessionName of c.sessions) {
+          records.push({
+            fields: {
+              '客户姓名': c.name,
+              '手机号': c.phone,
+              '报名身份': '副',
+              '参与场次': [optMap[sessionName] || sessionName],
+              '客户经理': null,
+              '主报名人': mainData.name,
+            }
+          });
+        }
+      }
+
+      await bitableBatchPost(
+        `/bitable/v1/apps/${CONFIG.APP_TOKEN}/tables/${CONFIG.TABLE_REG}/records/batch_create`,
+        records
+      );
+    }
+
+    // ========== 渲染 ==========
+    function renderLoading() {
+      document.getElementById('app').innerHTML = `
+        <div class="loading">
+          <div class="spinner"></div>
+          <p>加载中...</p>
+        </div>
+      `;
+    }
+
+    function renderError(msg) {
+      document.getElementById('app').innerHTML = `
+        <div class="error-page">
+          <div class="icon">⚠️</div>
+          <h2>加载失败</h2>
+          <p>${msg}</p>
+        </div>
+      `;
+    }
+
+    function renderForm() {
+      const selectedNames = Array.from(selectedSessions).map(n => {
+        const s = sessions.find(x => x.name === n);
+        return s ? `${n}（${formatTimeShort(s.time)}）` : n;
+      }).join('、');
+
+      document.getElementById('app').innerHTML = `
+        <div class="header">
+          <h1>📋 活动报名</h1>
+          <p>${eventName}</p>
+        </div>
+
+        <!-- 场次选择 -->
+        <div class="card">
+          <div class="section-title">选择参与场次</div>
+          <div class="selected-summary ${selectedSessions.size > 0 ? 'show' : ''}" id="selectedSummary">
+            已选：${selectedNames}
+          </div>
+          <div id="sessionList">
+            ${sessions.length === 0 ? '<div class="empty-sessions">暂无可选场次</div>' : ''}
+            ${sessions.map(s => `
+              <div class="session-item ${selectedSessions.has(s.name) ? 'selected' : ''}" onclick="toggleSession('${s.name.replace(/'/g, "\\'")}')">
+                <div class="session-checkbox"></div>
+                <div class="session-info">
+                  <div class="session-name">${s.name}</div>
+                  <div class="session-time">🕐 ${formatTime(s.time)}</div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- 报名信息 -->
+        <div class="card">
+          <div class="section-title">报名信息</div>
+
+          <div class="form-group">
+            <label class="form-label">姓名 <span class="required">*</span></label>
+            <input class="form-input" type="text" id="inputName" placeholder="请输入您的姓名" maxlength="50">
+            <div class="form-error">请输入姓名</div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">手机号 <span class="required">*</span></label>
+            <input class="form-input" type="tel" id="inputPhone" placeholder="请输入手机号" maxlength="20">
+            <div class="form-error">请输入正确的手机号</div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">客户经理 <span class="required">*</span></label>
+            <select class="form-select" id="inputManager">
+              <option value="">请选择客户经理</option>
+              ${managers.map(m => `<option value="${m.name}">${m.name}</option>`).join('')}
+            </select>
+            <div class="form-error">请选择客户经理</div>
+          </div>
+        </div>
+
+        <!-- 同行人 -->
+        <div class="card">
+          <div class="section-title">添加同行人（可选）</div>
+          <div id="companionList">
+            ${companions.map((c, i) => `
+              <div class="companion-card" id="companionCard${i}">
+                <button class="companion-remove" onclick="removeCompanion(${i})">✕</button>
+                <div class="form-group">
+                  <label class="form-label">同行人姓名</label>
+                  <input class="form-input companion-name" type="text" placeholder="同行人姓名" value="${c.name}" oninput="updateCompanion(${i}, 'name', this.value)" maxlength="50">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">手机号</label>
+                  <input class="form-input companion-phone" type="tel" placeholder="同行人手机号" value="${c.phone}" oninput="updateCompanion(${i}, 'phone', this.value)" maxlength="20">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">参与的场次</label>
+                  <div class="companion-sessions">
+                    ${sessions.map(s => `
+                      <span class="companion-session-tag ${c.sessions.has(s.name) ? 'selected' : ''}"
+                            onclick="toggleCompanionSession(${i}, '${s.name.replace(/'/g, "\\'")}')">
+                        ${s.name}
+                      </span>
+                    `).join('')}
+                  </div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+          <button class="btn-add-companion" onclick="addCompanion()">+ 添加同行人</button>
+        </div>
+      `;
+    }
+
+    function updateSelectedSummary() {
+      const el = document.getElementById('selectedSummary');
+      if (!el) return;
+      if (selectedSessions.size === 0) {
+        el.classList.remove('show');
+        return;
+      }
+      const names = Array.from(selectedSessions).map(n => {
+        const s = sessions.find(x => x.name === n);
+        return s ? `${n}（${formatTimeShort(s.time)}）` : n;
+      }).join('、');
+      el.textContent = '已选：' + names;
+      el.classList.add('show');
+    }
+
+    // ========== 交互事件 ==========
+    function toggleSession(name) {
+      if (selectedSessions.has(name)) {
+        selectedSessions.delete(name);
+      } else {
+        selectedSessions.add(name);
+      }
+      renderForm();
+    }
+
+    function addCompanion() {
+      companions.push({ name: '', phone: '', sessions: new Set() });
+      renderForm();
+    }
+
+    function removeCompanion(index) {
+      companions.splice(index, 1);
+      renderForm();
+    }
+
+    function updateCompanion(index, field, value) {
+      companions[index][field] = value;
+    }
+
+    function toggleCompanionSession(compIndex, sessionName) {
+      const c = companions[compIndex];
+      if (c.sessions.has(sessionName)) {
+        c.sessions.delete(sessionName);
+      } else {
+        c.sessions.add(sessionName);
+      }
+      const tag = document.querySelector(`#companionCard${compIndex} .companion-session-tag:nth-child(${
+        Array.from(document.querySelectorAll(`#companionCard${compIndex} .companion-session-tag`)).findIndex(el => el.textContent.trim() === sessionName) + 1
+      })`);
+      if (tag) tag.classList.toggle('selected');
+    }
+
+    function validateForm() {
+      let valid = true;
+      const nameEl = document.getElementById('inputName');
+      const phoneEl = document.getElementById('inputPhone');
+      const managerEl = document.getElementById('inputManager');
+
+      // Name
+      if (!nameEl.value.trim()) {
+        nameEl.classList.add('error'); valid = false;
+      } else {
+        nameEl.classList.remove('error');
+      }
+
+      // Phone
+      const phoneValid = /^1[3-9]\d{9}$/.test(phoneEl.value.trim());
+      if (!phoneValid) {
+        phoneEl.classList.add('error'); valid = false;
+      } else {
+        phoneEl.classList.remove('error');
+      }
+
+      // Manager
+      if (!managerEl.value) {
+        managerEl.classList.add('error'); valid = false;
+      } else {
+        managerEl.classList.remove('error');
+      }
+
+      return valid;
+    }
+
+    async function handleSubmit() {
+      if (submitting) return;
+      if (!validateForm()) return;
+      if (selectedSessions.size === 0) {
+        showModal(false, '请至少选择一个场次');
+        return;
+      }
+
+      const mainData = {
+        name: document.getElementById('inputName').value.trim(),
+        phone: document.getElementById('inputPhone').value.trim(),
+        manager: document.getElementById('inputManager').value
+      };
+
+      // 过滤有效的同行人（有姓名）
+      const validCompanions = companions.filter(c => c.name.trim());
+
+      submitting = true;
+      const btn = document.querySelector('.btn-submit');
+      btn.disabled = true;
+      btn.textContent = '提交中...';
+
+      try {
+        await submitRegistration(mainData, validCompanions);
+        showModal(true, `报名成功！${validCompanions.length > 0 ? `您携带了 ${validCompanions.length} 位同行人。` : ''}`);
+      } catch (err) {
+        console.error(err);
+        showModal(false, '提交失败：' + err.message);
+      } finally {
+        submitting = false;
+        btn.disabled = false;
+        btn.textContent = '提交报名';
+      }
+    }
+
+    function showModal(success, message) {
+      document.getElementById('modalIcon').innerHTML = success ? '✅' : '❌';
+      document.getElementById('modalIcon').className = 'modal-icon ' + (success ? 'success' : 'error');
+      document.getElementById('modalTitle').textContent = success ? '提交成功' : '提交失败';
+      document.getElementById('modalMessage').textContent = message;
+      document.getElementById('modalBtn').className = 'btn-close ' + (success ? 'success' : 'error');
+      document.getElementById('resultModal').classList.add('show');
+    }
+
+    function closeModal() {
+      document.getElementById('resultModal').classList.remove('show');
+    }
+
+    // ========== 初始化 ==========
+    async function init() {
+      renderLoading();
+      try {
+        token = await getTenantToken();
+
+        eventName = getUrlParam('event');
+        if (!eventName) {
+          renderError('缺少活动参数，请通过正确的二维码扫码进入');
+          return;
+        }
+
+        await Promise.all([fetchSessions(), fetchManagers()]);
+
+        if (sessions.length === 0) {
+          renderError(`活动「${eventName}」暂无可选场次`);
+          return;
+        }
+
+        renderForm();
+
+        // 绑定提交按钮
+        setTimeout(() => {
+          const bar = document.createElement('div');
+          bar.className = 'submit-bar';
+          bar.innerHTML = `
+            <div class="container">
+              <button class="btn-submit" onclick="handleSubmit()">提交报名</button>
+            </div>
+          `;
+          document.body.appendChild(bar);
+        }, 100);
+
+      } catch (err) {
+        console.error(err);
+        renderError('加载失败：' + err.message);
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
